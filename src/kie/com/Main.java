@@ -14,9 +14,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.*;
+import java.net.URL;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public class Main {
 
@@ -60,7 +60,6 @@ public class Main {
         StringBuilder response = new StringBuilder();
         try {
             URL url1 = new URL(url);
-//            System.setProperty("http.maxRedirects", "32");
             HttpsURLConnection connection = (HttpsURLConnection) url1.openConnection();
             connection.setRequestMethod("GET");
             connection.setRequestProperty("User-agent", "Chrome/68.0.3440.106");
@@ -76,7 +75,10 @@ public class Main {
                         status == HttpsURLConnection.HTTP_SEE_OTHER) {
 
                     String newUrl = connection.getHeaderField("Location");
-                    cookies = StringUtils.join(connection.getHeaderFields().get("Set-Cookie"), ";") + ";" + cookies;
+                    List<String> list = connection.getHeaderFields().get("Set-Cookie");
+                    list = new LinkedList<>(list);
+                    list.add(cookies);
+                    cookies = StringUtils.join(list, ";");
 
                     connection = (HttpsURLConnection) new URL(newUrl).openConnection();
                     connection.setRequestMethod("GET");
@@ -134,35 +136,25 @@ public class Main {
                         status == HttpsURLConnection.HTTP_SEE_OTHER) {
 
                     String newUrl = connection.getHeaderField("Location");
-                    String cookies = StringUtils.join(connection.getHeaderFields().get("Set-Cookie"), ";") + ";" + this.cookies;
+                    List<String> list = connection.getHeaderFields().get("Set-Cookie");
+                    list = new LinkedList<>(list);
+                    list.add(cookies);
                     connection = (HttpsURLConnection) new URL(newUrl).openConnection();
                     connection.setRequestMethod("GET");
                     connection.setRequestProperty("User-agent", "Chrome/68.0.3440.106 ");
                     connection.setRequestProperty("Cache-Control", "max-age=0");
                     connection.setRequestProperty("Connection", "keep-alive");
                     connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
-
                     connection.setRequestProperty("Accept-Language", "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,ny;q=0.6,gu;q=0.5");
-
-                    connection.setRequestProperty("Cookie", cookies);
+                    connection.setRequestProperty("Cookie", StringUtils.join(list, ";"));
                 }
             }
 
             status = connection.getResponseCode();
-//            cookies = StringUtils.join(connection.getHeaderFields().get("Set-Cookie"), ";");
-            System.out.println(status);
+            System.out.println(cookies);
             BufferedInputStream inputStream = new BufferedInputStream(connection.getInputStream());
-//            BufferedReader in = new BufferedReader(
-//                    new InputStreamReader(inputStream));
-//            String inputLine;
-//            StringBuilder response = new StringBuilder();
-//            while ((inputLine = in.readLine()) != null) {
-//                response.append(inputLine).append("\n");
-//            }
-//            in.close();
-//            connection.disconnect();
-//            System.out.println(response.toString());
             image = ImageIO.read(inputStream);
+            connection.disconnect();
         } catch (IOException e) {
             e.printStackTrace();
         }
