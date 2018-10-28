@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Scanner;
 
 public class Main {
 
@@ -29,9 +30,25 @@ public class Main {
         main.run();
     }
 
+    void run() {
+        web = downloadWeb(thsrURL + "/IMINT?locale=tw");
+        Document document = Jsoup.parse(web);
+        Element captcha = document.getElementById("BookingS1Form_homeCaptcha_passCode");
+        Element bookingForm = document.getElementById("BookingS1Form");
+        Element startStation = bookingForm.getElementsByAttributeValue("name", "selectStartStation").get(0);
+        getCaptchaAnswer(captcha);
+        Scanner scanner = new Scanner(System.in);
+//        scanner.next();
+        System.out.println(web);
+    }
+
+    private void submitForm() {
+        "BookingS1Form%3Ahf%3A0=&selectStartStation=3&selectDestinationStation=4&trainCon%3AtrainRadioGroup=0&seatCon%3AseatRadioGroup=radio18&bookingMethod=0&toTimeInputField=2018%2F10%2F28&toTimeTable=600A&toTrainIDInputField=&backTimeInputField=2018%2F10%2F28&backTimeTable=&backTrainIDInputField=&ticketPanel%3Arows%3A0%3AticketAmount=1F&ticketPanel%3Arows%3A1%3AticketAmount=0H&ticketPanel%3Arows%3A2%3AticketAmount=0W&ticketPanel%3Arows%3A3%3AticketAmount=0E&homeCaptcha%3AsecurityCode=QAP7&SubmitButton=%E9%96%8B%E5%A7%8B%E6%9F%A5%E8%A9%A2"
+
+    }
+
     private void getCaptchaAnswer(Element in) {
         String captchaURL = in.attr("src");
-
         BufferedImage bufferedImage = downloadImage(thsrURL + captchaURL);
         ImageIcon icon = new ImageIcon(bufferedImage);
         JFrame frame = new JFrame();
@@ -45,15 +62,6 @@ public class Main {
 
 
     }
-
-    void run() {
-        web = downloadWeb(thsrURL + "/IMINT?locale=tw");
-        Document document = Jsoup.parse(web);
-        Element captcha = document.getElementById("BookingS1Form_homeCaptcha_passCode");
-        getCaptchaAnswer(captcha);
-        System.out.println(web);
-    }
-
 
     private String downloadWeb(String url) {
 
@@ -124,9 +132,6 @@ public class Main {
             connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
             connection.setRequestProperty("Accept-Language", "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,ny;q=0.6,gu;q=0.5");
             connection.setRequestProperty("Host", "irs.thsrc.com.tw");
-
-
-
             connection.setInstanceFollowRedirects(false);
             System.out.println(connection.getResponseCode());
             int status = connection.getResponseCode();
@@ -151,7 +156,7 @@ public class Main {
             }
 
             status = connection.getResponseCode();
-            System.out.println(cookies);
+//            System.out.println(cookies);
             BufferedInputStream inputStream = new BufferedInputStream(connection.getInputStream());
             image = ImageIO.read(inputStream);
             connection.disconnect();
