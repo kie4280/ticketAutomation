@@ -13,16 +13,15 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+
 
 public class Main {
 
     String web;
     String thsrURL = "https://irs.thsrc.com.tw";
-    String cookies;
+    HashMap<String, String> cookies = new HashMap<>();
     static final String WINDOW_SEAT = "radio20";
     static final String AISLE_SEAT = "radio22";
     static final String SEAT_NO_PREF = "radio18";
@@ -31,6 +30,34 @@ public class Main {
         Main main = new Main();
         main.run();
     }
+
+    String cookieToString(HashMap<String, String> cookie) {
+        StringBuilder builder = new StringBuilder();
+        Iterator<Map.Entry<String, String>> entries = cookie.entrySet().iterator();
+        if (entries.hasNext()) {
+            Map.Entry<String, String> e = entries.next();
+            builder.append(e.getValue());
+        }
+        while (entries.hasNext()) {
+            Map.Entry<String, String> e = entries.next();
+            builder.append(";").append(e.getValue());
+        }
+
+
+        return builder.toString();
+    }
+
+    void addCookie(List<String> c) {
+
+        for (String s : c) {
+            String d = s.split(";")[0];
+            String[] entry = d.split("=");
+            if (entry.length == 2) {
+                this.cookies.put(entry[0], s);
+            }
+        }
+    }
+
 
     void run() {
         web = downloadWeb(thsrURL + "/IMINT?locale=tw");
@@ -44,13 +71,16 @@ public class Main {
         String out = null;
 
         try {
-            out = generateForm("1", "2", SEAT_NO_PREF, URLEncoder.encode("2018/10/28", "UTF-8"), "600A", "1", scanner.next());
+            out = generateForm("1", "2", SEAT_NO_PREF, URLEncoder.encode("2018/11/10", "UTF-8"), "600A", "1", scanner.next());
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+
+//        out = "sdff";
         if (out != null) {
             String location = bookingForm.attr("action");
-            String result = post(thsrURL + "/IMINT/" + location.substring(location.indexOf("?wicket")), Collections.singletonList(out));
+            String result = post(thsrURL + "/IMINT/" + ";" + cookies
+                    + location.substring(location.indexOf("?wicket")), Collections.singletonList(out));
             System.out.println(result);
         }
 
@@ -109,19 +139,20 @@ public class Main {
             connection.setRequestProperty("Connection", "keep-alive");
             connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
             connection.setRequestProperty("Origin", "https://irs.thsrc.com.tw");
-            connection.setRequestProperty("Referer", "https://irs.thsrc.com.tw/IMINT/");
+            connection.setRequestProperty("Referer", "https://irs.thsrc.com.tw/IMINT?locale=tw");
             connection.setRequestProperty("Accept-Language", "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,ny;q=0.6,gu;q=0.5");
             connection.setRequestProperty("Host", "irs.thsrc.com.tw");
-            connection.setRequestProperty("Cookie", cookies);
+            connection.setRequestProperty("Cookie", cookieToString(cookies));
             connection.setDoOutput(true);
             connection.setInstanceFollowRedirects(false);
 
-            DataOutputStream os = new DataOutputStream(connection.getOutputStream());
-            os.writeUTF(data.get(0));
-//            os.flush();
+            OutputStreamWriter os = new OutputStreamWriter(connection.getOutputStream(), "8859_1");
+            os.write(data.get(0));
+            os.flush();
             os.close();
 
             int status = connection.getResponseCode();
+            System.out.println(status);
             if (status != HttpsURLConnection.HTTP_OK) {
                 if (status == HttpsURLConnection.HTTP_MOVED_PERM ||
                         status == HttpsURLConnection.HTTP_MOVED_TEMP ||
@@ -130,8 +161,8 @@ public class Main {
                     String newUrl = connection.getHeaderField("Location");
                     List<String> list = connection.getHeaderFields().get("Set-Cookie");
                     list = new LinkedList<>(list);
-                    list.add(cookies);
-                    cookies = StringUtils.join(list, ";");
+//                    list.add(cookies);
+//                    cookies = StringUtils.join(list, ";");
 
                     connection = (HttpsURLConnection) new URL(newUrl).openConnection();
                     connection.setRequestMethod("GET");
@@ -143,8 +174,8 @@ public class Main {
                     connection.setRequestProperty("Accept-Language", "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,ny;q=0.6,gu;q=0.5");
                     connection.setRequestProperty("Host", "irs.thsrc.com.tw");
                     connection.setRequestProperty("Origin", "https://irs.thsrc.com.tw");
-                    connection.setRequestProperty("Referer", "https://irs.thsrc.com.tw/IMINT/");
-                    connection.setRequestProperty("Cookie", cookies);
+                    connection.setRequestProperty("Referer", "https://irs.thsrc.com.tw/IMINT?locale=tw");
+//                    connection.setRequestProperty("Cookie", cookies);
                 }
             }
             status = connection.getResponseCode();
@@ -186,9 +217,11 @@ public class Main {
 
                     String newUrl = connection.getHeaderField("Location");
                     List<String> list = connection.getHeaderFields().get("Set-Cookie");
-                    list = new LinkedList<>(list);
-                    list.add(cookies);
-                    cookies = StringUtils.join(list, ";");
+                    addCookie(list);
+
+//                    list = new LinkedList<>(list);
+//                    list.add(cookies);
+//                    cookies = StringUtils.join(list, ";");
 
                     connection = (HttpsURLConnection) new URL(newUrl).openConnection();
                     connection.setRequestMethod("GET");
@@ -199,14 +232,16 @@ public class Main {
 
                     connection.setRequestProperty("Accept-Language", "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,ny;q=0.6,gu;q=0.5");
                     connection.setRequestProperty("Host", "irs.thsrc.com.tw");
-                    connection.setRequestProperty("Cookie", cookies);
+                    connection.setInstanceFollowRedirects(false);
+                    connection.setRequestProperty("Cookie", cookieToString(cookies));
+                    status = connection.getResponseCode();
+
                 }
             }
 
+            List<String> list = connection.getHeaderFields().get("Set-Cookie");
+            addCookie(list);
 
-            status = connection.getResponseCode();
-            cookies = StringUtils.join(connection.getHeaderFields().get("Set-Cookie"), ";");
-            System.out.println(status);
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(connection.getInputStream()));
             String inputLine;
@@ -235,7 +270,6 @@ public class Main {
             connection.setRequestProperty("Accept-Language", "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,ny;q=0.6,gu;q=0.5");
             connection.setRequestProperty("Host", "irs.thsrc.com.tw");
             connection.setInstanceFollowRedirects(false);
-            System.out.println(connection.getResponseCode());
             int status = connection.getResponseCode();
             if (status != HttpsURLConnection.HTTP_OK) {
                 if (status == HttpsURLConnection.HTTP_MOVED_PERM ||
@@ -245,7 +279,7 @@ public class Main {
                     String newUrl = connection.getHeaderField("Location");
                     List<String> list = connection.getHeaderFields().get("Set-Cookie");
                     list = new LinkedList<>(list);
-                    list.add(cookies);
+//                    list.add(cookies);
                     connection = (HttpsURLConnection) new URL(newUrl).openConnection();
                     connection.setRequestMethod("GET");
                     connection.setRequestProperty("User-agent", "Chrome/68.0.3440.106 ");
